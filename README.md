@@ -34,18 +34,19 @@
 
 conda create -n auto-vv-machine python=3.10
 conda activate auto-vv-machine
-pip install torch==2.3.0 --index-url https://download.pytorch.org/whl/cu118
-pip install -r requirements.txt
-```
 
-### AI 模式
-```
-在普通模式基础上安装：(cuda版本和cpu版本请根据硬件选择其中一个)
+(cuda版本和cpu版本请根据硬件选择其中一个)
 cuda版本：
 pip install torch==2.3.0 --index-url https://download.pytorch.org/whl/cu118
 cpu版本：
 pip install torch==2.3.0
 
+pip install -r requirements.txt
+```
+
+### AI 模式
+```
+在普通模式基础上安装：
 pip install -U FlagEmbedding
 git clone https://huggingface.co/BAAI/bge-m3 // 这一步不进行会自动联网下载，注意你的网络情况
 ```
