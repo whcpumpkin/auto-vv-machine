@@ -40,13 +40,17 @@ pip install -r requirements.txt
 
 ### AI 模式
 ```
-在普通模式基础上安装：
+在普通模式基础上安装：(cuda版本和cpu版本请根据硬件选择其中一个)
+cuda版本：
 pip install torch==2.3.0 --index-url https://download.pytorch.org/whl/cu118
+cpu版本：
+pip install torch==2.3.0
+
 pip install -U FlagEmbedding
 git clone https://huggingface.co/BAAI/bge-m3 // 这一步不进行会自动联网下载，注意你的网络情况
 ```
 
-注意：AI模式可以不安装，仅使用关键词搜索。
+注意：AI模式可以不安装，仅使用关键词搜索。如果启用AI模式+CUDA，建议空闲显存至少为6G；如果启用AI模式+CPU，建议空闲内存至少为8G
 
 ## 使用
 
