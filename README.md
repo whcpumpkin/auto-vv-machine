@@ -2,6 +2,9 @@
 
 张维为教授总能一针见血地指出社会的问题，学养深厚，深受大家喜爱。我整理了张教授的诸多语录，可以使用关键词或者BGE-M3模型检索，帮助大家日常学习。
 
+
+![demo.png](demo.png)
+
 ## 资源下载
 下载地址：
 
@@ -17,6 +20,7 @@
 ├── bge-m3
 ├── name.pth
 ├── cached_file_fp16.pth
+├── demo.png
 └── filtered_frames
      ├── xx.jpg
      ├── yy.jpg
