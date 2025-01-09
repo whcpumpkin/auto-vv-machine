@@ -7,6 +7,23 @@
 
 百度网盘：https://pan.baidu.com/s/1oR9d-Yx_j7U013C6eaKCsg?pwd=wkgj 
 
+下载之后解压zip包。
+
+## 目录结构
+```
+├── README.md
+├── search.py
+├── requirements.txt
+├── bge-m3
+├── name.pth
+├── cached_file_fp16.pth
+└── filtered_frames
+     ├── xx.jpg
+     ├── yy.jpg
+     ├── zz.jpg
+```
+
+
 ## 环境安装
 ### 普通模式
 ```
