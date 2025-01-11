@@ -145,7 +145,10 @@ class ImageSearchApp:
 
                 self.cached_file_fp16_tensor = torch.load("cached_file_fp16.pth", map_location=self.device)
                 self.image_name = torch.load("name.pth")
-                self.model = BGEM3FlagModel('BAAI/bge-m3', use_fp16=True, devices=self.device)
+                if os.path.exists("bge-m3"):
+                    self.model = BGEM3FlagModel('bge-m3', use_fp16=True, devices=self.device)
+                else:
+                    self.model = BGEM3FlagModel('BAAI/bge-m3', use_fp16=True, devices=self.device)
                 messagebox.showinfo("Info", "AI model loaded successfully.")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to load AI model: {e}")
