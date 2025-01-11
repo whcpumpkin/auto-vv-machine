@@ -26,7 +26,12 @@ class ImageSearchApp:
         self.device_label.pack(side=tk.LEFT, padx=5)
 
         self.device_combobox = ttk.Combobox(self.select_device_frame, width=20, font=("Helvetica", 12))
-        self.device_combobox['values'] = ['cpu'] + [f'cuda:{i}' for i in range(torch.cuda.device_count())]
+        # 检查torch包是否安装完成
+        try:
+            import torch
+            self.device_combobox['values'] = ['cpu'] + [f'cuda:{i}' for i in range(torch.cuda.device_count())]
+        except Exception as e:
+            self.device_combobox['values'] = ['cpu']
         self.device_combobox.set('cpu')  # Default to CPU
         self.device_combobox.pack(side=tk.LEFT, padx=5)
 
@@ -137,6 +142,7 @@ class ImageSearchApp:
         if self.model is None:
             try:
                 from FlagEmbedding import BGEM3FlagModel
+
                 self.cached_file_fp16_tensor = torch.load("cached_file_fp16.pth", map_location=self.device)
                 self.image_name = torch.load("name.pth")
                 self.model = BGEM3FlagModel('BAAI/bge-m3', use_fp16=True, devices=self.device)
