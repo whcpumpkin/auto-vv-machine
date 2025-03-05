@@ -16,6 +16,7 @@
 
 2.0版 百度网盘：https://pan.baidu.com/s/126L5xCbZHJnqZh3M_MW1QA?pwd=496a
 
+(onlyvv.zip是onlyvv的压缩包，下载其中之一就行)
 
 ## 目录结构
 把网盘中的内容按以下方式组织
