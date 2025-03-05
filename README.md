@@ -4,6 +4,7 @@
 
 # 更新
 - 2025-3-5: 重新从265期视频中，根据whisper定位有字幕帧，然后提取该帧并用GOT-OCR2_0 进行OCR识别，并进行字幕去重、去掉没有张教授出现的图片，一共得到11.7万张无重复的、包含张维为教授人脸的图片。称为“张教授表情包库2.0”。
+并且普通版本不再需要下载pytorch
 
 
 ![demo.png](demo.png)
@@ -12,6 +13,7 @@
 下载地址：
 
 1.0版 百度网盘：https://pan.baidu.com/s/1oR9d-Yx_j7U013C6eaKCsg?pwd=wkgj 
+
 2.0版 百度网盘：https://pan.baidu.com/s/126L5xCbZHJnqZh3M_MW1QA?pwd=496a
 
 
