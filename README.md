@@ -13,6 +13,7 @@
 下载地址：
 
 1.0版 百度网盘：https://pan.baidu.com/s/1oR9d-Yx_j7U013C6eaKCsg?pwd=wkgj 
+(1.0版本不再建议下载)
 
 2.0版 百度网盘：https://pan.baidu.com/s/126L5xCbZHJnqZh3M_MW1QA?pwd=496a
 
