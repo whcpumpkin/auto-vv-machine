@@ -5,6 +5,7 @@ from PIL import Image, ImageTk
 import torch
 import numpy as np
 import pickle
+import json
 
 
 class ImageSearchApp:
@@ -63,9 +64,9 @@ class ImageSearchApp:
         self.search_bge_button.pack(side=tk.LEFT, padx=5)
 
         # Adding the AI checkbox for enabling/disabling bge-m3 search
-        self.ai_checkbox_var = tk.BooleanVar()  # Create a BooleanVar to track checkbox state
-        self.ai_checkbox = tk.Checkbutton(self.search_frame, text="Enable AI Search (bge-m3)", font=("Helvetica", 12), bg="#f0f0f0", variable=self.ai_checkbox_var)
-        self.ai_checkbox.pack(side=tk.LEFT, padx=5)
+        # self.ai_checkbox_var = tk.BooleanVar()  # Create a BooleanVar to track checkbox state
+        # self.ai_checkbox = tk.Checkbutton(self.search_frame, text="Enable AI Search (bge-m3)", font=("Helvetica", 12), bg="#f0f0f0", variable=self.ai_checkbox_var)
+        # self.ai_checkbox.pack(side=tk.LEFT, padx=5)
 
         # Display frame
         self.display_frame = tk.Frame(self.root, bg="#f0f0f0")
@@ -89,14 +90,19 @@ class ImageSearchApp:
         self.image_label.pack(fill=tk.BOTH, expand=True)
 
         # Folder selection
-        self.folder_path = filedialog.askdirectory(title="Select Image Folder")
-        if not self.folder_path:
-            messagebox.showerror("Error", "You must select a folder to proceed.")
-            self.root.destroy()
+        # self.folder_path = filedialog.askdirectory(title="Select Image Folder")
+        # if not self.folder_path:
+        #     messagebox.showerror("Error", "You must select a folder to proceed.")
+        #     self.root.destroy()
 
         self.cached_file_fp16_tensor = None
         self.image_name = None
         self.model = None  # Start with no model loaded
+        with open("onlyvv-result-no-repeat.json", "r", encoding="utf-8") as f:
+            self.onlyvv_result = json.load(f)
+        self.reverse_onlyvv_result = {v: k for k, v in self.onlyvv_result.items()}
+        self.onlyvv_result_keys = list(self.onlyvv_result.keys())
+        self.onlyvv_result_values = list(self.onlyvv_result.values())
 
     def set_device(self):
         selected_device = self.device_combobox.get()
@@ -115,11 +121,10 @@ class ImageSearchApp:
         self.listbox.delete(0, tk.END)
         matched_files = []
 
-        for root, _, files in os.walk(self.folder_path):
-            for file in files:
-                if keyword in file.lower() and file.lower().endswith(('.jpg', '.jpeg', '.png')):
-                    full_path = file
-                    matched_files.append(full_path)
+        for file, ocr in self.onlyvv_result.items():
+            if keyword in ocr.lower() and file.lower().endswith(('.jpg', '.jpeg', '.png')):
+                full_path = file
+                matched_files.append(full_path)
 
         # Show top 10 results
         for file in matched_files:
@@ -129,75 +134,36 @@ class ImageSearchApp:
             messagebox.showinfo("Info", "No images found with the given keyword.")
 
     def search_bge_images(self):
-        if not self.ai_checkbox_var.get():  # Use ai_checkbox_var to check if the checkbox is selected
-            messagebox.showwarning("Warning", "AI search is disabled. Please enable AI search to use bge-m3.")
-            return
+        # if not self.ai_checkbox_var.get():  # Use ai_checkbox_var to check if the checkbox is selected
+        #     messagebox.showwarning("Warning", "AI search is disabled. Please enable AI search to use bge-m3.")
+        #     return
 
         keyword = self.entry_bge.get().strip()
         if not keyword:
             messagebox.showwarning("Warning", "Please enter a keyword for bge-m3 search.")
             return
 
+        def compute_topk_cosine_similarity(cached_file_fp16_array, embeddings, top_k=20):
+            # Ensure embeddings is 2D
+            embeddings = np.expand_dims(embeddings, axis=0)  # Shape: (1, D)
+
+            # Compute cosine similarity
+            cosine_sim_between_cached_files = np.dot(cached_file_fp16_array, embeddings.T).squeeze(1)
+
+            # Get top-k indices
+            indices = np.argsort(-cosine_sim_between_cached_files)[:top_k]
+
+            return indices
+
         # Load the model only if the checkbox is selected
         if self.model is None:
             try:
                 from FlagEmbedding import BGEM3FlagModel
 
-                self.cached_file_fp16_tensor = torch.load("cached_file_fp16.pth", map_location=self.device)
-                self.image_name = torch.load("name.pth")
-                if os.path.exists("bge-m3"):
-                    self.model = BGEM3FlagModel('bge-m3', use_fp16=True, devices=self.device)
-                else:
-                    self.model = BGEM3FlagModel('BAAI/bge-m3', use_fp16=True, devices=self.device)
-                messagebox.showinfo("Info", "AI model loaded successfully.")
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to load AI model: {e}")
-                return
-        # check model device is the same as the selected device
-        if self.model.device.type != self.device.type:
-            self.model.to(self.device)
-            self.cached_file_fp16_tensor = self.cached_file_fp16_tensor.to(self.device)
-        # Perform the AI search using bge-m3 model
-        self.listbox.delete(0, tk.END)
-        embeddings = self.model.encode(
-            keyword,
-            batch_size=12,
-            max_length=8192,  # If you don't need such a long length, you can set a smaller value to speed up the encoding process.
-        )['dense_vecs']
-        embeddings = torch.from_numpy(embeddings).unsqueeze(0).to(self.device)
-        cosine_sim_between_cached_files = torch.mm(self.cached_file_fp16_tensor, embeddings.t()).squeeze(1)
-        _, indices = torch.topk(cosine_sim_between_cached_files, 20, dim=0)
-        matched_files = [self.image_name[i.item()] for i in indices]
-
-        # Show top 20 results
-        for file in matched_files:
-            self.listbox.insert(tk.END, file + ".jpg")
-
-        if self.listbox.size() == 0:
-            messagebox.showinfo("Info", "No images found with the given keyword.")
-
-    def search_bge_images(self):
-        if not self.ai_checkbox_var.get():  # Check if the AI checkbox is selected
-            messagebox.showwarning("Warning", "AI search is disabled. Please enable AI search to use bge-m3.")
-            return
-
-        keyword = self.entry_bge.get().strip()
-        if not keyword:
-            messagebox.showwarning("Warning", "Please enter a keyword for bge-m3 search.")
-            return
-        if self.device is None:
-            self.set_device()
-        # print(self.device)
-        # Load the model only if the checkbox is selected
-        if self.model is None:
-            try:
-                from FlagEmbedding import BGEM3FlagModel
-                self.cached_file_fp16_tensor = torch.load("cached_file_fp16.pth", map_location=self.device)
-                if self.device == 'cpu':
-                    self.cached_file_fp16_tensor = self.cached_file_fp16_tensor.float()
-                elif "cuda" in self.device:
-                    self.cached_file_fp16_tensor = self.cached_file_fp16_tensor.half()
-                self.image_name = torch.load("name.pth")
+                self.cached_file_fp16_dict_np = np.load("cached_file.npy", allow_pickle=True).item()
+                self.cached_file_fp16_dict_values = np.array(list(self.cached_file_fp16_dict_np.values()))
+                self.cached_file_fp16_dict_keys = list(self.cached_file_fp16_dict_np.keys())
+                # self.image_name = torch.load("name.pth")
                 if os.path.exists("bge-m3"):
                     self.model = BGEM3FlagModel('bge-m3', use_fp16=True, devices=self.device)
                 else:
@@ -206,6 +172,9 @@ class ImageSearchApp:
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to load AI model: {e}")
                 return
+        # check model device is the same as the selected device
+        # if self.model.device.type != self.device.type:
+        #     self.model.to(self.device)
 
         # Perform the AI search using bge-m3 model
         self.listbox.delete(0, tk.END)
@@ -214,14 +183,12 @@ class ImageSearchApp:
             batch_size=12,
             max_length=8192,  # If you don't need such a long length, you can set a smaller value to speed up the encoding process.
         )['dense_vecs']
-        embeddings = torch.from_numpy(embeddings).unsqueeze(0).to(self.device)
-        cosine_sim_between_cached_files = torch.mm(self.cached_file_fp16_tensor, embeddings.t()).squeeze(1)
-        _, indices = torch.topk(cosine_sim_between_cached_files, 20, dim=0)
-        matched_files = [self.image_name[i.item()] for i in indices]
+        indices = compute_topk_cosine_similarity(self.cached_file_fp16_dict_values, embeddings, top_k=40)
+        matched_ocrs = [self.onlyvv_result_values[i.item()] for i in indices]
 
         # Show top 20 results
-        for file in matched_files:
-            self.listbox.insert(tk.END, file + ".jpg")
+        for ocr in matched_ocrs:
+            self.listbox.insert(tk.END, ocr)
 
         if self.listbox.size() == 0:
             messagebox.showinfo("Info", "No images found with the given keyword.")
@@ -231,9 +198,9 @@ class ImageSearchApp:
         if not selection:
             return
 
-        selected_file = self.listbox.get(selection[0])
+        selected_ocr = self.listbox.get(selection[0])
         try:
-            img = Image.open(os.path.join(self.folder_path, selected_file))
+            img = Image.open(self.reverse_onlyvv_result[selected_ocr])
             img = img.resize((960, 540), Image.Resampling.LANCZOS)  # Resize to 960x540 using LANCZOS
             img_tk = ImageTk.PhotoImage(img)
 
