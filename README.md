@@ -12,11 +12,11 @@
 下载地址：
 
 1.0版 百度网盘：https://pan.baidu.com/s/1oR9d-Yx_j7U013C6eaKCsg?pwd=wkgj 
-2.0版 
+2.0版 百度网盘：https://pan.baidu.com/s/126L5xCbZHJnqZh3M_MW1QA?pwd=496a
 
-下载之后解压zip包。
 
 ## 目录结构
+把网盘中的内容按以下方式组织
 ```
 ├── README.md
 ├── search.py
@@ -56,7 +56,7 @@ pip install torch==2.3.0 --index-url https://download.pytorch.org/whl/cu118
 cpu版本：
 pip install torch==2.3.0
 pip install -U FlagEmbedding
-git clone https://huggingface.co/BAAI/bge-m3 // 这一步不进行会自动联网下载，注意你的网络情况
+git clone https://huggingface.co/BAAI/bge-m3 // 这一步不进行会自动联网下载，注意你的网络情况。如果网络情况不太好，可以从百度网盘中下载模型文件放入目录下。
 ```
 
 注意：AI模式可以不安装，仅使用关键词搜索。如果启用AI模式+CUDA，建议空闲显存至少为6G；如果启用AI模式+CPU，建议空闲内存至少为8G

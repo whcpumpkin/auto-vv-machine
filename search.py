@@ -2,7 +2,6 @@ import os
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from PIL import Image, ImageTk
-import torch
 import numpy as np
 import pickle
 import json
@@ -119,16 +118,16 @@ class ImageSearchApp:
             return
 
         self.listbox.delete(0, tk.END)
-        matched_files = []
+        matched_ocrs = []
 
         for file, ocr in self.onlyvv_result.items():
             if keyword in ocr.lower() and file.lower().endswith(('.jpg', '.jpeg', '.png')):
                 full_path = file
-                matched_files.append(full_path)
+                matched_ocrs.append(ocr)
 
-        # Show top 10 results
-        for file in matched_files:
-            self.listbox.insert(tk.END, file)
+        # Show top 20 results
+        for ocr in matched_ocrs:
+            self.listbox.insert(tk.END, ocr)
 
         if self.listbox.size() == 0:
             messagebox.showinfo("Info", "No images found with the given keyword.")
