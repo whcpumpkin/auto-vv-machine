@@ -5,6 +5,33 @@ from PIL import Image, ImageTk
 import numpy as np
 import pickle
 import json
+import io
+
+
+class ToolTip:
+
+    def __init__(self, widget, text):
+        self.widget = widget
+        self.text = text
+        self.tooltip = None
+        self.widget.bind("<Enter>", self.show_tooltip)
+        self.widget.bind("<Leave>", self.hide_tooltip)
+
+    def show_tooltip(self, event=None):
+        x = self.widget.winfo_rootx() + 25
+        y = self.widget.winfo_rooty() + 25
+
+        self.tooltip = tk.Toplevel(self.widget)
+        self.tooltip.wm_overrideredirect(True)
+        self.tooltip.wm_geometry(f"+{x}+{y}")
+
+        label = tk.Label(self.tooltip, text=self.text, bg="#ffffe0", relief="solid", borderwidth=1)
+        label.pack()
+
+    def hide_tooltip(self, event=None):
+        if self.tooltip:
+            self.tooltip.destroy()
+            self.tooltip = None
 
 
 class ImageSearchApp:
@@ -59,13 +86,17 @@ class ImageSearchApp:
         self.entry_bge = tk.Entry(self.search_frame, width=30, font=("Helvetica", 12))
         self.entry_bge.pack(side=tk.LEFT, padx=5)
 
+        # 添加上下文复选框
+        self.context_var = tk.BooleanVar()
+        self.context_check = tk.Checkbutton(self.search_frame, text="使用上下文", font=("Helvetica", 10), bg="#f0f0f0", variable=self.context_var)
+        self.context_check.pack(side=tk.LEFT, padx=2)
+
+        self.tooltip_label = tk.Label(self.search_frame, text="?", font=("Helvetica", 10, "bold"), fg="blue", bg="#f0f0f0", cursor="question_arrow")
+        self.tooltip_label.pack(side=tk.LEFT, padx=2)
+        ToolTip(self.tooltip_label, "启用上下文时，搜索词会被格式化为'{关键词}的最佳回复是什么'，\n用于优化上下文相关的搜索结果。")
+
         self.search_bge_button = tk.Button(self.search_frame, text="Search", font=("Helvetica", 12), bg="#2196f3", fg="white", command=self.search_bge_images)
         self.search_bge_button.pack(side=tk.LEFT, padx=5)
-
-        # Adding the AI checkbox for enabling/disabling bge-m3 search
-        # self.ai_checkbox_var = tk.BooleanVar()  # Create a BooleanVar to track checkbox state
-        # self.ai_checkbox = tk.Checkbutton(self.search_frame, text="Enable AI Search (bge-m3)", font=("Helvetica", 12), bg="#f0f0f0", variable=self.ai_checkbox_var)
-        # self.ai_checkbox.pack(side=tk.LEFT, padx=5)
 
         # Display frame
         self.display_frame = tk.Frame(self.root, bg="#f0f0f0")
@@ -88,12 +119,6 @@ class ImageSearchApp:
         self.image_label = tk.Label(self.image_frame, text="No image selected", font=("Helvetica", 14), bg="#e0e0e0", width=60, height=15, anchor="center")
         self.image_label.pack(fill=tk.BOTH, expand=True)
 
-        # Folder selection
-        # self.folder_path = filedialog.askdirectory(title="Select Image Folder")
-        # if not self.folder_path:
-        #     messagebox.showerror("Error", "You must select a folder to proceed.")
-        #     self.root.destroy()
-
         self.cached_file_fp16_tensor = None
         self.image_name = None
         self.model = None  # Start with no model loaded
@@ -102,6 +127,35 @@ class ImageSearchApp:
         self.reverse_onlyvv_result = {v: k for k, v in self.onlyvv_result.items()}
         self.onlyvv_result_keys = list(self.onlyvv_result.keys())
         self.onlyvv_result_values = list(self.onlyvv_result.values())
+        self.context_menu = tk.Menu(self.root, tearoff=0)
+        self.context_menu.add_command(label="复制图片", command=self.copy_image)
+        self.image_label.bind("<Button-3>", self.show_context_menu)
+
+    def show_context_menu(self, event):
+        # 检查是否有图片显示
+        if self.current_image:
+            try:
+                self.context_menu.post(event.x_root, event.y_root)
+            finally:
+                self.context_menu.grab_release()
+
+    def copy_image(self):
+        if self.current_image:
+            # 将PIL Image转换为Tkinter PhotoImage
+            img = self.current_image
+
+            # 将图片保存到内存缓冲区
+            # 将图片转换为BMP格式
+            output = io.BytesIO()
+            img.convert("RGB").save(output, "BMP")
+            data = output.getvalue()[14:]  # 去除BMP头
+            output.close()
+            import win32clipboard
+            # 复制到剪贴板
+            win32clipboard.OpenClipboard()
+            win32clipboard.EmptyClipboard()
+            win32clipboard.SetClipboardData(win32clipboard.CF_DIB, data)
+            win32clipboard.CloseClipboard()
 
     def set_device(self):
         selected_device = self.device_combobox.get()
@@ -110,6 +164,11 @@ class ImageSearchApp:
             messagebox.showinfo("Info", f"Device set to {selected_device}")
         else:
             messagebox.showwarning("Warning", "Please select a valid device.")
+
+    def set_model(self):
+        selected_model = self.model_combobox.get()
+        if selected_model:
+            self.model_id = selected_model
 
     def search_images(self):
         keyword = self.entry.get().strip()
@@ -133,14 +192,13 @@ class ImageSearchApp:
             messagebox.showinfo("Info", "No images found with the given keyword.")
 
     def search_bge_images(self):
-        # if not self.ai_checkbox_var.get():  # Use ai_checkbox_var to check if the checkbox is selected
-        #     messagebox.showwarning("Warning", "AI search is disabled. Please enable AI search to use bge-m3.")
-        #     return
 
         keyword = self.entry_bge.get().strip()
         if not keyword:
             messagebox.showwarning("Warning", "Please enter a keyword for bge-m3 search.")
             return
+        if self.context_var.get():
+            keyword = f"{keyword}的最佳回复是什么？"
 
         def compute_topk_cosine_similarity(cached_file_fp16_array, embeddings, top_k=20):
             # Ensure embeddings is 2D
@@ -167,22 +225,21 @@ class ImageSearchApp:
                     self.model = BGEM3FlagModel('bge-m3', use_fp16=True, devices=self.device)
                 else:
                     self.model = BGEM3FlagModel('BAAI/bge-m3', use_fp16=True, devices=self.device)
-                # messagebox.showinfo("Info", "AI model loaded successfully.")
+
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to load AI model: {e}")
                 return
-        # check model device is the same as the selected device
-        # if self.model.device.type != self.device.type:
-        #     self.model.to(self.device)
 
         # Perform the AI search using bge-m3 model
         self.listbox.delete(0, tk.END)
+
         embeddings = self.model.encode(
             keyword,
             batch_size=12,
             max_length=8192,  # If you don't need such a long length, you can set a smaller value to speed up the encoding process.
         )['dense_vecs']
         indices = compute_topk_cosine_similarity(self.cached_file_fp16_dict_values, embeddings, top_k=40)
+
         matched_ocrs = [self.onlyvv_result_values[i.item()] for i in indices]
 
         # Show top 20 results
@@ -201,6 +258,7 @@ class ImageSearchApp:
         try:
             img = Image.open(self.reverse_onlyvv_result[selected_ocr])
             img = img.resize((960, 540), Image.Resampling.LANCZOS)  # Resize to 960x540 using LANCZOS
+            self.current_image = img
             img_tk = ImageTk.PhotoImage(img)
 
             self.image_label.config(image=img_tk, text="")  # Update the image
