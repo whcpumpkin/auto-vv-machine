@@ -4,7 +4,7 @@
 
 # 更新
 - 2025-3-14: 数据集上传至hugging face: https://huggingface.co/datasets/whcpumpkin/auto-vv-machine, BGE-M3模型下载地址：https://huggingface.co/BAAI/bge-m3
-- 2025-3-13: 用户@HelloCard 人工校正了570个条目, 已经在百度网盘中更新。更正了关键词搜索（普通模式）下大写字母无法检索的BUG。
+- 2025-3-13: 用户@HelloCard 人工校正了570个条目, 非常感谢TA的帮助, 已经在百度网盘中更新。更正了关键词搜索（普通模式）下大写字母无法检索的BUG。
 
           添加了API的形式，可以直接调用API进行BGE-M3检索（来自硅基流动），上下文搜索在有API_KEY的情况下会调用Qwen2.5-7B回复，同时可以自由设定回复风格（默认为讽刺）。以上两个模型在硅基流动均免费。
 
