@@ -180,7 +180,7 @@ class ImageSearchApp:
         matched_ocrs = []
 
         for file, ocr in self.onlyvv_result.items():
-            if keyword in ocr.lower() and file.lower().endswith(('.jpg', '.jpeg', '.png')):
+            if keyword in ocr and file.lower().endswith(('.jpg', '.jpeg', '.png')):
                 full_path = file
                 matched_ocrs.append(ocr)
 
