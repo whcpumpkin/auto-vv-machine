@@ -148,7 +148,7 @@ class ImageSearchApp:
         self.style_label.pack(side=tk.LEFT, padx=5)
         self.style_entry = tk.Entry(self.style_frame, width=10, font=("Helvetica", 12))
         self.style_entry.pack(side=tk.LEFT, padx=5)
-        self.style_entry.insert(0, "诙谐")  # 插入默认值
+        self.style_entry.insert(0, "讽刺")  # 插入默认值
         self.style_button = tk.Button(self.style_frame, text="Save", font=("Helvetica", 12), bg="#ff9800", fg="white", command=self.save_style)
         self.style_button.pack(side=tk.LEFT, padx=5)
 
@@ -251,7 +251,7 @@ class ImageSearchApp:
             url = self.url
 
         if self.style is None:
-            style = "诙谐"
+            style = "讽刺"
         else:
             style = self.style
         payload = {
