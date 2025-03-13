@@ -130,6 +130,58 @@ class ImageSearchApp:
         self.context_menu = tk.Menu(self.root, tearoff=0)
         self.context_menu.add_command(label="复制图片", command=self.copy_image)
         self.image_label.bind("<Button-3>", self.show_context_menu)
+        self.api_frame = tk.Frame(self.root, bg="#f0f0f0")
+        self.api_frame.pack(pady=5)
+
+        self.api_label = tk.Label(self.api_frame, text="API_KEY:", font=("Helvetica", 12), bg="#f0f0f0")
+        self.api_label.pack(side=tk.LEFT, padx=5)
+
+        self.api_entry = tk.Entry(self.api_frame, width=40, font=("Helvetica", 12), show="*")
+        self.api_entry.pack(side=tk.LEFT, padx=5)
+
+        self.api_button = tk.Button(self.api_frame, text="Save", font=("Helvetica", 12), bg="#ff9800", fg="white", command=self.save_api_key)
+        self.api_button.pack(side=tk.LEFT, padx=5)
+
+        self.style_frame = tk.Frame(self.root, bg="#f0f0f0")
+        self.style_frame.pack(pady=5)
+        self.style_label = tk.Label(self.style_frame, text="上下文搜索风格", font=("Helvetica", 12), bg="#f0f0f0")
+        self.style_label.pack(side=tk.LEFT, padx=5)
+        self.style_entry = tk.Entry(self.style_frame, width=10, font=("Helvetica", 12))
+        self.style_entry.pack(side=tk.LEFT, padx=5)
+        self.style_entry.insert(0, "诙谐")  # 插入默认值
+        self.style_button = tk.Button(self.style_frame, text="Save", font=("Helvetica", 12), bg="#ff9800", fg="white", command=self.save_style)
+        self.style_button.pack(side=tk.LEFT, padx=5)
+
+        self.API_KEY = None
+        self.url = None
+        self.style = None
+        with open("config.json", "r", encoding="utf-8") as f:
+            config = json.load(f)
+            if "API_KEY" in config:
+                if len(config["API_KEY"]) > 0:
+                    self.API_KEY = config["API_KEY"]
+                messagebox.showinfo("成功", "API_KEY已导入")
+            if "url" in config:
+                self.url = config["url"]
+        self.device_button.invoke()
+
+    def save_style(self):
+        style = self.style_entry.get().strip()
+        if style:
+            self.style = style
+            messagebox.showinfo("成功", "Style已保存")
+        else:
+            self.style = None
+            messagebox.showwarning("警告", "Style已清除")
+
+    def save_api_key(self):
+        api_key = self.api_entry.get().strip()
+        if api_key:
+            self.API_KEY = api_key
+            messagebox.showinfo("成功", "API_KEY已保存")
+        else:
+            self.API_KEY = None
+            messagebox.showwarning("警告", "API_KEY已清除")
 
     def show_context_menu(self, event):
         # 检查是否有图片显示
@@ -191,14 +243,68 @@ class ImageSearchApp:
         if self.listbox.size() == 0:
             messagebox.showinfo("Info", "No images found with the given keyword.")
 
+    def ask_llm(self, keyword):
+        import requests
+        if self.url is None:
+            url = "https://api.siliconflow.cn/v1/chat/completions"
+        else:
+            url = self.url
+
+        if self.style is None:
+            style = "诙谐"
+        else:
+            style = self.style
+        payload = {
+            "model": "Qwen/Qwen2.5-7B-Instruct",
+            "messages": [{
+                "role": "user",
+                "content": "使用{}的语言，简洁回复{}".format(style, keyword)
+            }],
+            "response_format": {
+                "type": "text"
+            },
+            "max_tokens": 512,
+            "stop": None,
+            "temperature": 0.7,
+            "top_p": 0.7,
+            "top_k": 50,
+            "frequency_penalty": 0.5,
+        }
+        headers = {"Authorization": "Bearer {}".format(self.API_KEY), "Content-Type": "application/json"}
+
+        response = requests.request("POST", url, json=payload, headers=headers)
+        if response.status_code == 200:
+            return response.json()['choices'][0]['message']['content']
+        else:
+            return None
+
+    def ask_bgem3(self, keyword):
+        import requests
+
+        if self.url is None:
+            url = "https://api.siliconflow.cn/v1/embeddings"
+        else:
+            url = self.url
+
+        payload = {"model": "BAAI/bge-m3", "input": keyword, "encoding_format": "float"}
+        headers = {"Authorization": "Bearer {}".format(self.API_KEY), "Content-Type": "application/json"}
+
+        response = requests.request("POST", url, json=payload, headers=headers)
+        if response.status_code == 200:
+            return response.json()['data'][0]['embedding']
+        else:
+            return None
+
     def search_bge_images(self):
 
         keyword = self.entry_bge.get().strip()
         if not keyword:
             messagebox.showwarning("Warning", "Please enter a keyword for bge-m3 search.")
             return
-        if self.context_var.get():
+        if self.context_var.get() and self.API_KEY is None:
             keyword = f"{keyword}的最佳回复是什么？"
+        elif self.context_var.get() and self.API_KEY is not None:
+            keyword = self.ask_llm(keyword)
 
         def compute_topk_cosine_similarity(cached_file_fp16_array, embeddings, top_k=20):
             # Ensure embeddings is 2D
@@ -215,29 +321,35 @@ class ImageSearchApp:
         # Load the model only if the checkbox is selected
         if self.model is None:
             try:
-                from FlagEmbedding import BGEM3FlagModel
 
                 self.cached_file_fp16_dict_np = np.load("cached_file.npy", allow_pickle=True).item()
                 self.cached_file_fp16_dict_values = np.array(list(self.cached_file_fp16_dict_np.values()))
                 self.cached_file_fp16_dict_keys = list(self.cached_file_fp16_dict_np.keys())
                 # self.image_name = torch.load("name.pth")
-                if os.path.exists("bge-m3"):
-                    self.model = BGEM3FlagModel('bge-m3', use_fp16=True, devices=self.device)
+                if self.API_KEY is None:
+                    from FlagEmbedding import BGEM3FlagModel
+                    if os.path.exists("bge-m3"):
+                        self.model = BGEM3FlagModel('bge-m3', use_fp16=True, devices=self.device)
+                    else:
+                        self.model = BGEM3FlagModel('BAAI/bge-m3', use_fp16=True, devices=self.device)
                 else:
-                    self.model = BGEM3FlagModel('BAAI/bge-m3', use_fp16=True, devices=self.device)
-
+                    self.model = self.ask_bgem3
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to load AI model: {e}")
                 return
 
         # Perform the AI search using bge-m3 model
         self.listbox.delete(0, tk.END)
+        if self.API_KEY is not None:
+            embeddings = self.ask_bgem3(keyword)
+            embeddings = np.array(embeddings)
+        else:
+            embeddings = self.model.encode(
+                keyword,
+                batch_size=12,
+                max_length=8192,  # If you don't need such a long length, you can set a smaller value to speed up the encoding process.
+            )['dense_vecs']
 
-        embeddings = self.model.encode(
-            keyword,
-            batch_size=12,
-            max_length=8192,  # If you don't need such a long length, you can set a smaller value to speed up the encoding process.
-        )['dense_vecs']
         indices = compute_topk_cosine_similarity(self.cached_file_fp16_dict_values, embeddings, top_k=40)
 
         matched_ocrs = [self.onlyvv_result_values[i.item()] for i in indices]
