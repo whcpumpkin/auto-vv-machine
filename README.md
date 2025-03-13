@@ -6,6 +6,7 @@
 - 2025-3-13: 用户@HelloCard 人工校正了570个条目, 已经在百度网盘中更新。更正了关键词搜索（普通模式）下大写字母无法检索的BUG。
           添加了API的形式，可以直接调用API进行BGE-M3检索（来自硅基流动），上下文搜索在有API_KEY的情况下会调用Qwen2.5-7B回复，同时可以自由设定回复风格（默认为讽刺）。以上两个模型在硅基流动均免费。
           API_KEY可以在cloud.siliconflow.cn中注册获取。为了避免每次都需要填写，可以在config.json中填充，自动读取。
+          search_api.py是简略版，不需要安装pytorch。
 - 2025-3-11: 线上关键词搜索网站, vv.whcpumpkin.icu, 资金有限，可能比较慢。不支持AI模式。
 - 2025-3-10: 添加了上下文搜索，输入上文，搜索最佳回复上文的VV图片。添加了右键复制图片功能。
 - 2025-3-5: 重新从265期视频中，根据whisper定位有字幕帧，然后提取该帧并用GOT-OCR2_0 进行OCR识别，并进行字幕去重、去掉没有张教授出现的图片，一共得到11.7万张无重复的、包含张维为教授人脸的图片。称为“张教授表情包库2.0”。
@@ -49,11 +50,22 @@
 ```
 
 conda create -n auto-vv-machine python=3.10
+
 conda activate auto-vv-machine
 
 
 pip install -r requirements.txt
 ```
+
+### API模式
+```
+conda create -n auto-vv-machine python=3.10
+
+conda activate auto-vv-machine
+
+pip install -r requirements.txt
+```
+API模式必须填充API_KEY，请在config.json中填充或者在UI界面中保存。
 
 ### AI 模式
 ```
